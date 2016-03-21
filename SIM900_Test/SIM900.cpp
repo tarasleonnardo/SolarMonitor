@@ -150,41 +150,49 @@ Serial.println("AT+HTTPPARA=\"CID\",1");
 
 /* Sena data to the server here */
 SIM900_Serial.write("AT+HTTPPARA=\"URL\",\"", 19);
+Serial.write("AT+HTTPPARA=\"URL\",\"", 19);
 SIM900_Serial.write(Settings.serverPath, strlen(Settings.serverPath));
+Serial.write(Settings.serverPath, strlen(Settings.serverPath));
 SIM900_Serial.write('?');
-
-Serial.println("Sending data...");
-fToStr(buf, tracer.RealTimeData.ArrayInVolt, "to=UTF-8");
-SIM900_Serial.write(Settings.email);
-Serial.println("email: ");
-Serial.write(Settings.email);
+Serial.write('?');
   
 fToStr(buf, tracer.RealTimeData.ArrayInVolt, "InV=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 fToStr(buf, tracer.RealTimeData.ArrayInCur, "&InCurr=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 fToStr(buf, tracer.RealTimeData.ArrayInPow, "&InPow=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 fToStr(buf, tracer.RealTimeData.BatPow, "&BatPow=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 fToStr(buf, tracer.RealTimeData.LoadInVolt, "&LoadInV=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 fToStr(buf, tracer.RealTimeData.LoadInCur, "&LoadInCurr=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 
 fToStr(buf, tracer.RealTimeData.LoadInPow, "&LoadInPow=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 
 fToStr(buf, tracer.RealTimeData.BatTemp, "&BatTemp=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 
 fToStr(buf, tracer.RealTimeData.InsideTemp, "&InsideTemp=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 
 fToStr(buf, tracer.RealTimeData.BatSoc, "&BatSol=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 fToStr(buf, tracer.RealTimeData.RemoteBatTemp, "&RmBatTemp=");
 SIM900_Serial.write(buf, strlen(buf));
+Serial.write(buf, strlen(buf));
 
 //fToStr(buf, tracer.RealTimeData.BatRealRatedPow, "&BatRealRatedPow=");
 //SIM900_Serial.write(buf, strlen(buf));
@@ -205,7 +213,8 @@ SIM900_Serial.println("\"");
 SIM900_Serial.println("AT+HTTPACTION=0");
 Serial.println("AT+HTTPACTION=0");
   delay(del);
-  SIM900_Serial.readBytes(buf, sizeof(buf) - 1);
+  Serial.write(buf, SIM900_Serial.readBytes(buf, sizeof(buf) - 1));
+  
   //if(!checkOk()) return SIM900_NO_ANS;
 SIM900_Serial.println("AT+HTTPTERM");
 Serial.println("AT+HTTPTERM");

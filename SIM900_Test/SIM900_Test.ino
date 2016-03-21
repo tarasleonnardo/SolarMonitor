@@ -55,7 +55,14 @@ void loop() {
     {
       //sim900.checkAccount();
       //sim900.getNumber();
-      sim900.sendRealTimeData();
+      if(SIM900_Class::SIM900_NO_ERR == sim900.sendRealTimeData())
+      {
+        Serial.println("Data sending OK!");
+      }else
+      {
+        Serial.println("Data sending Error!");
+      }
+      sim900.powerSwitch();
     }
     CD_Cr.SendData = false;
   }
