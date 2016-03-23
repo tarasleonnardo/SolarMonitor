@@ -1,6 +1,7 @@
 #include "Tracer.h"
 #include "Arduino.h"
 #include "modRtuCrcLib.h"
+#include "CommonData.h"
 
 SoftwareSerial Tracer_Serial(4, 5);
 
@@ -23,20 +24,67 @@ void Tracer_Class::startListening(void)
   Tracer_Serial.listen();
 }
 
-bool Tracer_Class::getRegister(uint16_t* reg, REGISTERS_ADDRESSES regN)
+bool Tracer_Class::getValueDoubleReg(float* val, REGISTERS_ADDRESSES regnL)
+{
+  uint16_t regL, regH;
+  
+  if(getReadOnlyRegister(&regL, regnL) && getReadOnlyRegister(&regH, (REGISTERS_ADDRESSES) (regnL + 1)))
+  {
+    *val = (regL | (regH << 16)) / TRACER_TIMES;
+    return true;
+  }
+
+  return false;
+}
+
+bool Tracer_Class::getValueSingleReg(float* val, REGISTERS_ADDRESSES regN)
+{
+  uint16_t reg;
+  
+  if(getReadOnlyRegister(&reg, regN))
+  {
+    *val = reg / TRACER_TIMES;
+    return true;
+  }
+
+  return false;
+}
+
+bool Tracer_Class::getRwRegister(uint16_t* reg, REGISTERS_ADDRESSES regN)
 {
   int8_t cnt = 0;
   while(cnt++ < 5)
   {
-    formAskFrame(regN, 1); // form ask to receive one register
+    formAskFrame(regN, MB_CMD_READ_STORE_REGS, 1); // form ask to receive one register
     send(); // send ask
     delay(10); // wait for answer
     if(true != receive())
     {
       continue;
     }
-    *reg = buf[4];
-    *reg |= buf[3] << 8;
+    *reg = ioBuf[4];
+    *reg |= ioBuf[3] << 8;
+
+    return true;
+  }
+  return false;
+}
+
+bool Tracer_Class::getReadOnlyRegister(uint16_t* reg, REGISTERS_ADDRESSES regN)
+{
+  int8_t cnt = 0;
+  while(cnt++ < 5)
+  {
+    formAskFrame(regN, MB_CMD_READ_INPUT_REGS, 1); // form ask to receive one register
+    send(); // send ask
+    delay(10); // wait for answer
+    if(true != receive())
+    {
+      continue;
+    }
+    *reg = ioBuf[4];
+    *reg |= ioBuf[3] << 8;
+
     return true;
   }
   return false;
@@ -49,7 +97,7 @@ bool Tracer_Class::getRegister(uint16_t* reg, REGISTERS_ADDRESSES regN)
 void Tracer_Class::send(void)
 {
   TRACER_SWITCH_TO_SEND
-  Tracer_Serial.write(buf, bufCount);
+  Tracer_Serial.write(ioBuf, bufCount);
   //delayMicroseconds(336 * (bufCount));
   TRACER_SWITCH_TO_RECV
 }
@@ -66,125 +114,125 @@ bool Tracer_Class::receive(void)
   {
     return false;
   }
-  else if(TRACER_BUF_SIZE >= Tracer_Serial.available())
+  else if(CD_IO_BUF_SIZE >= Tracer_Serial.available())
   {
-    cnt = Tracer_Serial.readBytes(buf, Tracer_Serial.available());
+    cnt = Tracer_Serial.readBytes(ioBuf, Tracer_Serial.available());
   }else
   {
-    cnt = Tracer_Serial.readBytes(buf, TRACER_BUF_SIZE);
+    cnt = Tracer_Serial.readBytes(ioBuf, CD_IO_BUF_SIZE);
   }
   bufCount = cnt;
   cnt = 0;  
   // find frame start
-  while((buf[cnt] != MB_SLAVE_ADDR) &&
-        (buf[cnt + 1] != lastCmd))
+  while((ioBuf[cnt] != MB_SLAVE_ADDR) &&
+        (ioBuf[cnt + 1] != lastCmd))
   {
     cnt++;
     if(cnt >= bufCount - 5)return false;
   }
   if(cnt != 0)
   {// shift frame to the left
-    memcpy(buf, buf + cnt, sizeof(buf) - cnt);
+    memcpy(ioBuf, ioBuf + cnt, sizeof(ioBuf) - cnt);
   }
-  bufCount = buf[2] + 5;
+  bufCount = ioBuf[2] + 5;
   
-  crc = buf[bufCount - 2];
-  crc |= (buf[bufCount - 1] << 8);
+  crc = ioBuf[bufCount - 2];
+  crc |= (ioBuf[bufCount - 1] << 8);
 
-  return (CRC_Ok == CRC_ModRtuCrcCheck(crc, buf, bufCount - 2));
+  return (CRC_Ok == CRC_ModRtuCrcCheck(crc, ioBuf, bufCount - 2));
 }
 
 /*************************************************/
 /* Make frame to send with crc in the buffer */
 /*************************************************/
-void Tracer_Class::formAskFrame(REGISTERS_ADDRESSES val, uint16_t recLength)
+void Tracer_Class::formAskFrame(REGISTERS_ADDRESSES val, MODBUS_CMDS cmd, uint16_t recLength)
 {
   bufCount = 0;
 
   uint16_t crc = 0;
 
-  buf[bufCount++] = MB_SLAVE_ADDR; // Slave address
-  buf[bufCount++] = lastCmd = MB_CMD_READ_INPUT_REGS; // Read few store registers command
+  ioBuf[bufCount++] = MB_SLAVE_ADDR; // Slave address
+  ioBuf[bufCount++] = lastCmd = cmd; // Read few store registers command
 
   crc = (uint16_t) val;
-  buf[bufCount++] = (crc >> 8) & 0xFF; // Register address high
-  buf[bufCount++] = crc & 0xFF; // Register address low
+  ioBuf[bufCount++] = (crc >> 8) & 0xFF; // Register address high
+  ioBuf[bufCount++] = crc & 0xFF; // Register address low
 
-  buf[bufCount++] = (recLength >> 8) & 0xFF;
-  buf[bufCount++] = recLength & 0xFF;
+  ioBuf[bufCount++] = (recLength >> 8) & 0xFF;
+  ioBuf[bufCount++] = recLength & 0xFF;
 
-  crc = CRC_ModRtuCrcCalc(buf, bufCount);
+  crc = CRC_ModRtuCrcCalc(ioBuf, bufCount);
 
-  buf[bufCount++] = crc & 0xFF;
-  buf[bufCount++] = (crc >> 8) & 0xFF;
+  ioBuf[bufCount++] = crc & 0xFF;
+  ioBuf[bufCount++] = (crc >> 8) & 0xFF;
 }
 
-bool Tracer_Class::refreshRealTimeData(void)
+bool Tracer_Class::refreshReadOnlyData(void)
 {
   uint16_t uiL = 0, uiH = 0;
+
+ // Rated data
+  if(!getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::PvRatedVolt], ADDR_PV_RATED_VOLTAGE) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::PvRatedCur], ADDR_PV_RATED_CURRENT) ||
+    !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::PvRatedPow], ADDR_PV_RATED_POW_L) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::BatRatedVolt], ADDR_BAT_RATED_VOLTAGE) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::BatRatedCur], ADDR_BAT_RATED_CURRENT) ||
+    !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::BatRatedPow], ADDR_BAT_RATED_POWER_L) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::LoadRatedCur], ADDR_LOAD_RATED_CURRENT))
+    return false;
+    
+  /*** Real-time data ***/
+
+  // Panel data
+  if(!getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::PvInVolt], ADDR_INPUT_VOLTAGE) ||
+     !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::PvInCur], ADDR_INPUT_CURRENT) ||
+     !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::PvInPow], ADDR_INPUT_POWER_L))
+     return false;
+
+  // Battery data
+  if(!getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::BatPow], ADDR_BAT_CHRG_POWER_L) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::BatTemp], ADDR_BAT_TEMP) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::BatSoc], ADDR_BAT_SOC) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::RemoteBatTemp], ADDR_BAT_REMOTE_TEMP) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::BatRealRatedVolt], ADDR_BAT_RE_RATED_VOLT))
+    return false;
   
-    if(!getRegister(&uiL, ADDR_INPUT_VOLTAGE))
+  // Load data
+  if(!getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::LoadVolt], ADDR_LOAD_VOLTAGE) ||
+    !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::LoadCur], ADDR_LOAD_CURRENT) ||
+    !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::LoadPow], ADDR_LOAD_POWER_L))
     return false;
-    RealTimeData.ArrayInVolt = (float)uiL / TRACER_TIMES;
 
-    if(!getRegister(&uiL, ADDR_INPUT_CURRENT))
+  // Inside tamp
+  if(!getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::InsideTemp], ADDR_INSIDE_TEMP))
     return false;
-    RealTimeData.ArrayInCur = (float)uiL / TRACER_TIMES;
 
-    if(!getRegister(&uiL, ADDR_INPUT_POWER_L) || 
-       !getRegister(&uiL, ADDR_INPUT_POWER_H))
-    return false;
-    RatedData.ArrayRatedPow = (float)(uiL | ((uint32_t)uiH << 16)) / TRACER_TIMES;
+  // Real-time status
+  if(!getReadOnlyRegister(&CD_TracerParam.BatStat, ADDR_BAT_STATUS) ||
+     !getReadOnlyRegister(&CD_TracerParam.CrgEquipStat, ADDR_CHRG_EQUIPMENT_STATUS) ||
+     !getReadOnlyRegister(&CD_TracerParam.DisCrgEquipStat, ADDR_DISCHRG_EQUIPMENT_STATUS))
+     return false;
 
-    if(!getRegister(&uiL, ADDR_BAT_CHRG_POWER_L) || 
-       !getRegister(&uiL, ADDR_BAT_CHRG_POWER_H))
-    return false;
-    RealTimeData.BatPow = (float)(uiL | ((uint32_t)uiH << 16)) / TRACER_TIMES;
 
-    if(!getRegister(&uiL, ADDR_LOAD_VOLTAGE))
-    return false;
-    RealTimeData.LoadInVolt = (float)uiL / TRACER_TIMES;
+  // Statistical data
 
-    if(!getRegister(&uiL, ADDR_LOAD_CURRENT))
-    return false;
-    RealTimeData.LoadInCur = (float)uiL / TRACER_TIMES;
+  if(!getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::MaxVoltToday], ADDR_MAX_VOLT_TODAY) ||
+  !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::MinVoltToday], ADDR_MIN_VOLT_TODAY) ||
+  !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::MaxBatVoltToday], ADDR_MAX_BAT_VOLT_TODAY) ||
+  !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::MinBatVoltToday], ADDR_MIN_BAT_VOLT_TODAY) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::ConsumedEnergyToday], ADDR_CONS_EN_TODAY_L) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::ConsumedEnergyMonth], ADDR_CONS_EN_MON_L) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::ConsumedEnergyYear], ADDR_CONS_EN_YEAR_L) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::ConsumedEnergyTotal], ADDR_CONS_EN_TOTAL_L) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::GeneratedEnergyToday], ADDR_GEN_EN_TODAY_L) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::GeneratedEnergyMonth], ADDR_GEN_EN_MON_L) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::GeneratedEnergyYear], ADDR_GEN_EN_YEAR_L) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::GeneratedEnergyTotal], ADDR_GEN_EN_TOTAL_L) ||
+  !getValueSingleReg(&CD_TracerData[CD_TracerFloatDataType::BatVolt], ADDR_STAT_BAT_VOLT) ||
+  !getValueDoubleReg(&CD_TracerData[CD_TracerFloatDataType::BatCur], ADDR_STAT_BAT_CURRENT_L))
+  return false;
 
-    if(!getRegister(&uiL, ADDR_LOAD_POWER_L) || 
-       !getRegister(&uiL, ADDR_LOAD_POWER_H))
-    return false;
-    RealTimeData.LoadInPow = (float)(uiL | ((uint32_t)uiH << 16)) / TRACER_TIMES;
-
-    if(!getRegister(&uiL, ADDR_BAT_TEMP))
-    return false;
-    RealTimeData.BatTemp = (float)uiL / TRACER_TIMES;
-
-    if(!getRegister(&uiL, ADDR_INSIDE_TEMP))
-    return false;
-    RealTimeData.InsideTemp = (float)uiL / TRACER_TIMES;
-
-    if(!getRegister(&uiL, ADDR_BAT_SOC))
-    return false;
-    RealTimeData.BatSoc = (float)uiL / TRACER_TIMES;
-
-    if(!getRegister(&uiL, ADDR_BAT_REMOTE_TEMP))
-    return false;
-    RealTimeData.RemoteBatTemp = (float)uiL / TRACER_TIMES;
-
-    if(!getRegister(&uiL, ADDR_BAT_RE_RATED_POW))
-    return false;
-    RealTimeData.BatRealRatedPow = (float)uiL / TRACER_TIMES;
-
-    if(!getRegister(&uiL, ADDR_BAT_STATUS))
-    return false;
-    RealTimeData.BatStatus = uiL;
-
-    if(!getRegister(&uiL, ADDR_CHRG_EQUIPMENT_STATUS))
-    return false;
-    RealTimeData.ChrgEquipmentStatus = uiL;
-
-    if(!getRegister(&uiL, ADDR_DISCHRG_EQUIPMENT_STATUS))
-    return false;
-    RealTimeData.DischargingEquipmentStatus = uiL;
+     
 
     return true;
 }
@@ -193,37 +241,6 @@ bool Tracer_Class::refreshRatedData(void)
 {
   uint16_t uiL = 0, uiH = 0;
 
-    if(!getRegister(&uiL, ADDR_PV_RATED_VOLTAGE)) // Voltage
-    return false;
-    RatedData.ArrayRatedVolt = (float)uiL / TRACER_TIMES;
-    if(!getRegister(&uiL, ADDR_PV_RATED_CURRENT)) // Current
-    return false;
-    RatedData.ArrayRatedCur = (float)uiL / TRACER_TIMES;
-    if(!getRegister(&uiL, ADDR_PV_RATED_POW_L)) // Power low
-    return false;
-    if(!getRegister(&uiH, ADDR_PV_RATED_POW_H)) // Power high
-    return false;
-    RatedData.ArrayRatedPow = (float)(uiL | ((uint32_t)uiH << 16)) / TRACER_TIMES;
-    ////////////////////////////////////////////////////////////////////////////////////////////////////
-    if(!getRegister(&uiH, ADDR_BAT_VOLTAGE)) // Rated bat volt
-    return false;
-    RatedData.ArrayRatedVolt = (float)(uiL | ((uint32_t)uiH << 16)) / TRACER_TIMES;
-    if(!getRegister(&uiH, ADDR_BAT_CURRENT)) // Rated bat volt
-    return false;
-    RatedData.BatRatedCurr = (float)(uiL | ((uint32_t)uiH << 16)) / TRACER_TIMES;
-    if(!getRegister(&uiL, ADDR_BAT_POWER_L)) // Power low
-    return false;
-    if(!getRegister(&uiH, ADDR_BAT_POWER_H)) // Power high
-    return false;
-    RatedData.ArrayRatedPow = (float)(uiL | ((uint32_t)uiH << 16)) / TRACER_TIMES;
-    ///////////////////////////////////////////////////////////////////////////////////////////////////
-    if(!getRegister(&uiL, ADDR_LOAD_RATED_CURRENT)) // Rated load current
-    return false;
-    RatedData.LoadRatedCurr = (float)uiL / TRACER_TIMES;
-    
-    if(!getRegister(&uiL, ADDR_CHARGING_MODE)) // Charging mode
-    return false;
-    RatedData.CrgMode = uiL;
     
     return true;
 }

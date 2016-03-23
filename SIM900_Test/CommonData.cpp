@@ -9,6 +9,9 @@ PC_Class pc;
 CD_CrType CD_Cr;
 
 
+struct CD_TracerParams CD_TracerParam;
+float CD_TracerData[CD_TracerFloatDataType::TracerDataNum];
+
 
 
 

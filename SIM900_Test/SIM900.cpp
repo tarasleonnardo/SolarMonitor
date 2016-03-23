@@ -156,64 +156,31 @@ Serial.write(Settings.serverPath, strlen(Settings.serverPath));
 SIM900_Serial.write('?');
 Serial.write('?');
   
-fToStr(buf, tracer.RealTimeData.ArrayInVolt, "InV=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-fToStr(buf, tracer.RealTimeData.ArrayInCur, "&InCurr=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-fToStr(buf, tracer.RealTimeData.ArrayInPow, "&InPow=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-fToStr(buf, tracer.RealTimeData.BatPow, "&BatPow=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-fToStr(buf, tracer.RealTimeData.LoadInVolt, "&LoadInV=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-fToStr(buf, tracer.RealTimeData.LoadInCur, "&LoadInCurr=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
+for(int i = PvInVolt; i <= BatRealRatedVolt/*TracerDataNum*/; i ++)
+{
+  if(i > PvInVolt)
+    sprintf((char*)ioBuf, "&val%d=", i);
+  else
+   sprintf((char*)ioBuf, "val%d=", i);
+  fToStr((char*)(ioBuf + strlen((char*)ioBuf)), CD_TracerData[i], "");
+  SIM900_Serial.write((char*)ioBuf, strlen((char*)ioBuf));
+  Serial.write((char*)ioBuf, strlen((char*)ioBuf));
+    
+  delay(5);      
+}
 
-fToStr(buf, tracer.RealTimeData.LoadInPow, "&LoadInPow=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-
-fToStr(buf, tracer.RealTimeData.BatTemp, "&BatTemp=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-
-fToStr(buf, tracer.RealTimeData.InsideTemp, "&InsideTemp=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-
-fToStr(buf, tracer.RealTimeData.BatSoc, "&BatSol=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-fToStr(buf, tracer.RealTimeData.RemoteBatTemp, "&RmBatTemp=");
-SIM900_Serial.write(buf, strlen(buf));
-Serial.write(buf, strlen(buf));
-
-//fToStr(buf, tracer.RealTimeData.BatRealRatedPow, "&BatRealRatedPow=");
-//SIM900_Serial.write(buf, strlen(buf));
-/*
-sprintf(buf, "&BatStat=%d", tracer.RealTimeData.BatStatus);
-SIM900_Serial.write(buf, strlen(buf));
-sprintf(buf, "&CrgEquipStat=%d", tracer.RealTimeData.ChrgEquipmentStatus);
-SIM900_Serial.write(buf, strlen(buf));
-sprintf(buf, "&DiscrgEquipStat=%d", tracer.RealTimeData.DischargingEquipmentStatus);
-SIM900_Serial.write(buf, strlen(buf));
-*/
 SIM900_Serial.println("\"");
+Serial.println("\"");
 
   delay(del + del + del);
   SIM900_Serial.readBytes(buf, sizeof(buf) - 1);
-  //if(!checkOk()) return SIM900_NO_ANS;
   
 SIM900_Serial.println("AT+HTTPACTION=0");
 Serial.println("AT+HTTPACTION=0");
-  delay(del);
+  delay(10000);
+  Serial.setTimeout(10000);
   Serial.write(buf, SIM900_Serial.readBytes(buf, sizeof(buf) - 1));
+  Serial.setTimeout(1500);
   
   //if(!checkOk()) return SIM900_NO_ANS;
 SIM900_Serial.println("AT+HTTPTERM");

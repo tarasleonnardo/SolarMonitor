@@ -207,21 +207,21 @@ void PC_Class::sendTracerRatedData(void)
   ioBuf[2] = 0; // RW
   ioBuf[3] = 30;
 
-  memcpy(ioBuf + crc, &tracer.RatedData.ArrayRatedVolt, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::PvRatedVolt], sizeof(float));
   crc+= sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RatedData.ArrayRatedCur, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::PvRatedCur], sizeof(float));
   crc+= sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RatedData.ArrayRatedPow, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::PvRatedPow], sizeof(float));
   crc+= sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RatedData.BatRatedVolt, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::BatRatedVolt], sizeof(float));
   crc+= sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RatedData.BatRatedCurr, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::BatRatedCur], sizeof(float));
   crc+= sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RatedData.BatRatedPow, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::BatRatedPow], sizeof(float));
   crc+= sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RatedData.LoadRatedCurr, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::LoadRatedCur], sizeof(float));
   crc+= sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RatedData.CrgMode, sizeof(uint16_t));
+  memcpy(ioBuf + crc, &CD_TracerParam.ChargingMode, sizeof(CD_ChargingModes));
     
   crc = CRC_ModRtuCrcCalc(ioBuf, ioBuf[PC_B_DATA_NUM] + PC_EXTRA_BYTES);
 
@@ -240,35 +240,36 @@ void PC_Class::sendTracerRealTimeData(void)
   ioBuf[2] = 0; // RW
   ioBuf[3] = 54;
 
-  memcpy(ioBuf + crc, &tracer.RealTimeData.ArrayInVolt, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::PvInVolt], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.ArrayInCur, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::PvInCur], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.ArrayInPow, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::PvInPow], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.BatPow, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::BatPow], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.LoadInVolt, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::LoadVolt], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.LoadInCur, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::LoadCur], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.LoadInPow, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::LoadPow], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.BatTemp, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::BatTemp], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.InsideTemp, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::InsideTemp], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.BatSoc, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::BatSoc], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.RemoteBatTemp, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::RemoteBatTemp], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.BatRealRatedPow, sizeof(float));
+  memcpy(ioBuf + crc, &CD_TracerData[CD_TracerFloatDataType::BatRealRatedVolt], sizeof(float));
   crc += sizeof(float);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.BatStatus, sizeof(uint16_t));
+  
+  memcpy(ioBuf + crc, &CD_TracerParam.BatStat, sizeof(CD_TracerParam.BatStat));
   crc += sizeof(uint16_t);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.ChrgEquipmentStatus, sizeof(uint16_t));
+  memcpy(ioBuf + crc, &CD_TracerParam.CrgEquipStat, sizeof(CD_TracerParam.CrgEquipStat));
   crc += sizeof(uint16_t);
-  memcpy(ioBuf + crc, &tracer.RealTimeData.DischargingEquipmentStatus, sizeof(uint16_t));
+  memcpy(ioBuf + crc, &CD_TracerParam.DisCrgEquipStat, sizeof(CD_TracerParam.DisCrgEquipStat));
   crc += sizeof(uint16_t);
 
   

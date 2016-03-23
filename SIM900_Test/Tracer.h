@@ -4,7 +4,6 @@
 #include "stdint.h"
 #include <SoftwareSerial.h>
 
-#define TRACER_BUF_SIZE 32U
 //#define TRACER_DEBUG // pring debug info
 
 #define MB_SLAVE_ADDR   0x01  // Modbus address of tracer
@@ -12,18 +11,20 @@
 
 class Tracer_Class
 {
-  public:
+public:
    typedef enum
    {
+
+    // Read only registers
     ADDR_PV_RATED_VOLTAGE = 0x3000,
     ADDR_PV_RATED_CURRENT = 0x3001,
     ADDR_PV_RATED_POW_L = 0x3002,
     ADDR_PV_RATED_POW_H = 0x3003,
 
-    ADDR_BAT_VOLTAGE = 0x3004,
-    ADDR_BAT_CURRENT = 0x3005,
-    ADDR_BAT_POWER_L = 0x3006,
-    ADDR_BAT_POWER_H = 0x3007,
+    ADDR_BAT_RATED_VOLTAGE = 0x3004,
+    ADDR_BAT_RATED_CURRENT = 0x3005,
+    ADDR_BAT_RATED_POWER_L = 0x3006,
+    ADDR_BAT_RATED_POWER_H = 0x3007,
 
     ADDR_CHARGING_MODE  = 0x3008,
 
@@ -50,12 +51,31 @@ class Tracer_Class
     ADDR_BAT_SOC = 0x311A,
     ADDR_BAT_REMOTE_TEMP = 0x311B,
 
-    ADDR_BAT_RE_RATED_POW = 0x311D,
+    ADDR_BAT_RE_RATED_VOLT = 0x311D,
 
     ADDR_BAT_STATUS = 0x3200,
     ADDR_CHRG_EQUIPMENT_STATUS = 0x3201,
     ADDR_DISCHRG_EQUIPMENT_STATUS = 0x3202,
 
+  // Statistical data
+    ADDR_MAX_VOLT_TODAY = 0x3300,
+    ADDR_MIN_VOLT_TODAY = 0x3301,
+    ADDR_MAX_BAT_VOLT_TODAY = 0x3302,
+    ADDR_MIN_BAT_VOLT_TODAY = 0x3303,
+
+    ADDR_CONS_EN_TODAY_L = 0x3304,
+    ADDR_CONS_EN_MON_L = 0x3306,
+    ADDR_CONS_EN_YEAR_L = 0x3308,
+    ADDR_CONS_EN_TOTAL_L = 0x330A,
+
+    ADDR_GEN_EN_TODAY_L = 0x330C,
+    ADDR_GEN_EN_MON_L = 0x330E,
+    ADDR_GEN_EN_YEAR_L = 0x3310,
+    ADDR_GEN_EN_TOTAL_L = 0x3312,
+
+    ADDR_STAT_BAT_VOLT = 0x331A,
+    ADDR_STAT_BAT_CURRENT_L = 0x331B,
+     
     ADDR_OVR_TEMP_INSIDE = 0x2000
    }REGISTERS_ADDRESSES;
 private:
@@ -77,56 +97,21 @@ private:
   void init(void);
   void startListening(void);
   // Get single register
-  bool getRegister(uint16_t* reg, REGISTERS_ADDRESSES regN);
+  bool getValueDoubleReg(float* val, REGISTERS_ADDRESSES regnL);
+  bool getValueSingleReg(float* val, REGISTERS_ADDRESSES regN);
+  bool getReadOnlyRegister(uint16_t* reg, REGISTERS_ADDRESSES regN);
+  bool getRwRegister(uint16_t* reg, REGISTERS_ADDRESSES regN);
   // Refresh all data in groups
   bool refreshRatedData(void);
-  bool refreshRealTimeData(void);
+  bool refreshReadOnlyData(void);
   private:
   void send(void);
   bool receive(void);
-  void formAskFrame(REGISTERS_ADDRESSES val, uint16_t num);
+  void formAskFrame(REGISTERS_ADDRESSES val, MODBUS_CMDS cmd, uint16_t num);
 
   // data
   uint8_t lastCmd;
-  uint8_t bufCount;
-  uint8_t buf[TRACER_BUF_SIZE];
-
-
-  public:
-  // Tracer data
-  struct
-  {
-    float ArrayRatedVolt;
-    float ArrayRatedCur;
-    float ArrayRatedPow;
-    float BatRatedVolt;
-    float BatRatedCurr;
-    float BatRatedPow;
-    float LoadRatedCurr;
-    uint16_t CrgMode;
-  }RatedData;
-
-  struct
-  {
-    float ArrayInVolt;
-    float ArrayInCur;
-    float ArrayInPow;
-    float BatPow;
-    float LoadInVolt;
-    float LoadInCur;
-    float LoadInPow;
-    float BatTemp;
-    float InsideTemp;
-    float BatSoc;
-    float RemoteBatTemp;
-    float BatRealRatedPow;
-    uint16_t BatStatus;
-    uint16_t ChrgEquipmentStatus;
-    uint16_t DischargingEquipmentStatus;
-  }RealTimeData;
-  
-
-  
+  uint8_t bufCount;  
 };
 
 #endif

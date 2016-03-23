@@ -6,17 +6,24 @@
 
 char* fToStr(char* buf, float val, char* str)
 {
-  uint32_t tmp = (uint32_t) val;
+  int32_t tmp = (int32_t) val;
+  int8_t cnt = 0;
 
   if(str != NULL) sprintf(buf, str);
   else buf[0] = '\0';
 
+  cnt = strlen(buf);
+  sprintf(buf + cnt, "%d.", tmp);
+
+  cnt = strlen(buf);
+  tmp = (int32_t) ((int32_t)(val * 10) % 10);
+  buf[cnt++] = (char)tmp + '0';
   
-  sprintf(buf + strlen(buf), "%d", tmp);
-
-  tmp = (uint32_t) ((val - tmp) * 10000);
-
-  sprintf(buf + strlen(buf), ".%d", tmp);
+  tmp = (int32_t) ((int32_t)(val * 100) % 10);
+  buf[cnt++] = (char)tmp + '0';
+  
+  tmp = (int32_t) ((int32_t)(val * 1000) % 10);
+  buf[cnt++] = (char)tmp + '0';
 
   return buf;
 }
@@ -43,9 +50,24 @@ void loop() {
   
 
   tracer.startListening();
-  tracer.refreshRatedData();
-  tracer.refreshRealTimeData();
-
+  if(tracer.refreshReadOnlyData())
+  {
+    Serial.println("Tracer data Ok!");
+    /*
+    Serial.println("*********************");
+    for(int i = 0; i < TracerDataNum; i ++)
+    {
+      sprintf((char*)ioBuf, "Val%d=", i);
+      fToStr((char*)(ioBuf + strlen((char*)ioBuf)), CD_TracerData[i], "");
+      Serial.println((char*)ioBuf);
+      delay(5);      
+    }
+    */
+  }else
+  {
+    Serial.println("Tracer data Error!");
+    delay(100);
+  }
   pc.getCmd();
 
   if(CD_Cr.SendData)
@@ -53,7 +75,7 @@ void loop() {
     sim900.init();
     if(sim900.isOn())
     {
-      //sim900.checkAccount();
+      sim900.checkAccount();
       //sim900.getNumber();
       if(SIM900_Class::SIM900_NO_ERR == sim900.sendRealTimeData())
       {
