@@ -9,17 +9,18 @@
   void Settings_Class::init(void)
   {
     address = 02;
-    period = 1; // minutes
+    period = 5; // minutes
     sprintf(phoneNum, "978784993");
     sprintf(email, "taraschrt06@gmail.com");
-    sprintf(usrName, "taras");
-    sprintf(usrPwd, "123456");
-    sprintf(serverPath, "http://solar-test.comlu.com/storeGet.php");
+    sprintf(usrName, "arduino");
+    sprintf(usrPwd, "arduino");
+    sprintf(serverPath, "http://solar-test.comlu.com/storeData.php");
 
     sprintf(ap, "\"internet\"");
     sprintf(apUsr, "\"\"");
     sprintf(apPwd, "\"\"");
 
+    restore((uint8_t*)phoneNum, SETT_PH_NUM_LEN, SETT_PH_NUM_ADDR);
     restore((uint8_t*)phoneNum, SETT_PH_NUM_LEN, SETT_PH_NUM_ADDR);
   }
   

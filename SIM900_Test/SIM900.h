@@ -19,6 +19,12 @@ class SIM900_Class
   ErrorsType sendRealTimeData(void);
 
   private:
+
+  void writeGetStart(void);
+  bool writeRatedData(void);
+  bool writeRealTimeData(void);
+  bool writeStatisticData(void);
+  
   float balans;
   char buf[256] = {0};
 

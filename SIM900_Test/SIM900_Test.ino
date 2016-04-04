@@ -25,6 +25,8 @@ char* fToStr(char* buf, float val, char* str)
   tmp = (int32_t) ((int32_t)(val * 1000) % 10);
   buf[cnt++] = (char)tmp + '0';
 
+  buf[cnt] = '\0';
+
   return buf;
 }
 
@@ -42,6 +44,7 @@ void setup() {
 void loop() {
   uint16_t reg = 0;
   char tmp;
+  static unsigned long sendTime = 0;
   // put your main code here, to run repeatedly:
   if(0 == digitalRead(13))
     digitalWrite(13, HIGH);
@@ -52,7 +55,7 @@ void loop() {
   tracer.startListening();
   if(tracer.refreshReadOnlyData())
   {
-    Serial.println("Tracer data Ok!");
+   // Serial.println("Tracer data Ok!");
     /*
     Serial.println("*********************");
     for(int i = 0; i < TracerDataNum; i ++)
@@ -69,6 +72,12 @@ void loop() {
     delay(100);
   }
   pc.getCmd();
+
+  if(sendTime < millis())
+  {
+    sendTime = millis() + Settings.period * 60000;
+    CD_Cr.SendData = true;  
+  }
 
   if(CD_Cr.SendData)
   {
