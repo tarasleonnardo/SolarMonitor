@@ -2,7 +2,9 @@
 #include "CommonData.h"
 #include "stdio.h"
 
-
+#define PRINT_DEBUG 1
+#define SEC_TO_MILLIS 1000
+#define RESTART_TIMEOUT (millis() + (uint32_t)Settings.timeout * SEC_TO_MILLIS)
 
 char* fToStr(char* buf, float val, char* str)
 {
@@ -30,73 +32,106 @@ char* fToStr(char* buf, float val, char* str)
   return buf;
 }
 
-void setup() {
-  // put your setup code here, to run once:
-  pinMode(13, OUTPUT);
-  pinMode(6, OUTPUT);
-
+void setup() {    
   CD_Cr.SendData = false;
-  Settings.init();
-  tracer.init();
+  CD_Cr.RefreshTracer = true;
   pc.init();
+  Serial.println("Settings init");
+  Settings.init();
+  Serial.println("SIM900 init");
+  sim900.init();
+  Serial.println("SIM900 power off");
+  sim900.turnPower(false);
+  Serial.println("Tracer init");
+  tracer.init();
+  Serial.println("Arduino started");
 }
 
 void loop() {
   uint16_t reg = 0;
   char tmp;
-  static unsigned long sendTime = 0;
-  // put your main code here, to run repeatedly:
-  if(0 == digitalRead(13))
-    digitalWrite(13, HIGH);
-  else
-    digitalWrite(13, LOW);
-  
+  static uint8_t tracerCnt = 0;
+  static uint32_t sendTime = RESTART_TIMEOUT;
 
-  tracer.startListening();
-  if(tracer.refreshReadOnlyData())
+  noInterrupts();
+  // restart millis counter
+  timer0_overflow_count = 0;
+  interrupts();
+
+#if PRINT_DEBUG != 0
+  // Check timeout
+  sprintf((char*) ioBuf, "Timeout %u, Time left %lu.", Settings.timeout, sendTime - millis());
+  Serial.println((char*)ioBuf);
+#endif
+  if(!pc.connected && sendTime < millis())
+  {// Allow data sending
+    #if PRINT_DEBUG != 0
+    Serial.println("Allow data sending");
+    #endif
+    CD_Cr.SendData = true;
+  }
+  // Check command from PC
+  if(pc.getCmd())
   {
-   // Serial.println("Tracer data Ok!");
-    /*
-    Serial.println("*********************");
-    for(int i = 0; i < TracerDataNum; i ++)
+    #if PRINT_DEBUG != 0
+    Serial.println("Cmd");
+    #endif
+  }
+  if(pc.connected)
+  {
+    if(++tracerCnt >= 20)
     {
-      sprintf((char*)ioBuf, "Val%d=", i);
-      fToStr((char*)(ioBuf + strlen((char*)ioBuf)), CD_TracerData[i], "");
-      Serial.println((char*)ioBuf);
-      delay(5);      
+      CD_Cr.RefreshTracer = true;
+      tracerCnt = 0;
     }
-    */
+    sendTime = RESTART_TIMEOUT;
+    #if PRINT_DEBUG != 0
+    sprintf((char*) ioBuf, "Pc connected. Restart in %u ms.", sendTime - millis());
+    Serial.println((char*)ioBuf);
+    #endif
   }else
   {
-    Serial.println("Tracer data Error!");
-    delay(100);
+    CD_Cr.RefreshTracer = true;
+    tracerCnt = 0;
   }
-  pc.getCmd();
 
-  if(sendTime < millis())
+  // Get tracer data
+  if(CD_Cr.RefreshTracer)
   {
-    sendTime = millis() + Settings.period * 60000;
-    CD_Cr.SendData = true;  
+    tracer.refreshData();
+    CD_Cr.RefreshTracer = false;
   }
-
+  
   if(CD_Cr.SendData)
-  {
-    sim900.init();
-    if(sim900.isOn())
+  {// if data send command or send time expired
+    if(sim900.turnPower(true))
     {
+      sim900.checkAns("Call Ready", 60000);
+      sim900.getSigLevel();
       sim900.checkAccount();
-      //sim900.getNumber();
-      if(SIM900_Class::SIM900_NO_ERR == sim900.sendRealTimeData())
+      sim900.getNumber();
+      sim900.sendRealTimeData();
+      #if PRINT_DEBUG != 0
+      Serial.println("Turning off");
+      #endif
+      if(!sim900.turnPower(false))
       {
-        Serial.println("Data sending OK!");
-      }else
-      {
-        Serial.println("Data sending Error!");
+        #if PRINT_DEBUG != 0
+        Serial.println("Turning off error");
+        #endif
       }
-      sim900.powerSwitch();
+        CD_Cr.SendData = false;
+        sendTime = RESTART_TIMEOUT;
+        #if PRINT_DEBUG != 0
+        sprintf((char*) ioBuf, "Restart in %u ms.", sendTime - millis());
+        Serial.println((char*)ioBuf);
+        #endif
+    }else
+    {
+      #if PRINT_DEBUG != 0
+      Serial.println("Turning on error");
+      #endif
     }
-    CD_Cr.SendData = false;
   }
-
-  return;
+  delay(10);
 }

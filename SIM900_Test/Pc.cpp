@@ -11,6 +11,7 @@
 void PC_Class::init(void)
 {
  Serial.begin(9600);
+ discCnt = 0;
  Serial.println("PC protocol started");
 }
 
@@ -18,6 +19,18 @@ bool PC_Class::getCmd(void)
 {
   uint16_t crc;
   char buf[32];
+
+  if(pc.connected)
+  {
+    sprintf((char*)ioBuf, "discCnt = %d", discCnt);
+    Serial.println((char*)ioBuf);
+  } 
+  if(pc.connected  && (++ discCnt >= 50))
+  {
+    pc.connected = false;
+    discCnt = 0;
+  }
+  
   while(0 < Serial.available())
   {
     if(Settings.address != (ioBuf[PC_B_ADDR] = Serial.read()))
@@ -28,12 +41,11 @@ bool PC_Class::getCmd(void)
     {
       continue;
     }
-    
     if((ioBuf[PC_B_DATA_NUM] + 2) != Serial.readBytes(ioBuf + PC_B_DATA_START, ioBuf[PC_B_DATA_NUM] + 2))
     {
+      Serial.write(ioBuf, 8);
       return false;
     }
-
     crc = ioBuf[PC_B_CRC_L];
     crc |= (ioBuf[PC_B_CRC_H] << 8);
     
@@ -50,6 +62,13 @@ bool PC_Class::getCmd(void)
 
 void PC_Class::selectCommand(void)
 {
+  if(!connected)
+  {
+    CD_Cr.SendData = false;
+  }
+  connected = true;
+  discCnt = 0;
+  
   switch(ioBuf[PC_B_CMD])
   {
     case PC_CmdIsAlive:
@@ -129,10 +148,28 @@ void PC_Class::selectCommand(void)
       if(!ioBuf[PC_B_RW]) sendString(Settings.serverPath, (PC_Class::PC_Commands)ioBuf[PC_B_CMD]);
       else
       {
+        if(ioBuf[PC_B_DATA_NUM] > SETT_SERVER_PATH_LEN)  ioBuf[PC_B_DATA_NUM] = SETT_SERVER_PATH_LEN;
         memcpy((void*)Settings.serverPath, (void*)ioBuf + PC_B_DATA_START, ioBuf[PC_B_DATA_NUM]);
         Settings.serverPath[ioBuf[PC_B_DATA_NUM]] = '\0';
         Settings.save((uint8_t *)Settings.serverPath, SETT_SERVER_PATH_LEN, SETT_SERVER_PATH_ADDR);
         sendAns(PC_AnsOk, (PC_Class::PC_Commands)ioBuf[PC_B_CMD]);
+      }
+    break;
+    case PC_GetTimeout:
+      if(!ioBuf[PC_B_RW])
+      {
+        sprintf((char*)ioBuf + 20, "%d", Settings.timeout);
+        sendString((char*)ioBuf + 20, (PC_Class::PC_Commands)ioBuf[PC_B_CMD]);
+      }
+      else
+      {
+        if(isdigit(ioBuf[PC_B_DATA_START]) && ioBuf[PC_B_DATA_START] > 0x30)
+        {
+          Settings.timeout = atoi((char*)ioBuf + PC_B_DATA_START);
+          if(Settings.timeout < 15) Settings.timeout = 15;
+          Settings.save((uint8_t *)&Settings.timeout, SETT_PERIOD_LEN, SETT_PERIOD_ADDRESS);
+          sendAns(PC_AnsOk, (PC_Class::PC_Commands)ioBuf[PC_B_CMD]);
+        }
       }
     break;
     /* Tracer */

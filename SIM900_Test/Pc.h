@@ -19,6 +19,9 @@ class PC_Class
   void init(void);
   bool getCmd(void);
 
+  bool connected = false;
+  uint8_t discCnt = 0;
+
   private:
   typedef enum
   {
@@ -32,12 +35,14 @@ class PC_Class
     PC_GetApUsr,
     PC_GetApPwd,
     PC_GetServerPath,
+    PC_GetTimeout,
 
     /** Tracer **/
     PC_CmdGetTracerRatedData,
     PC_CmdGetTracerRealTimeData,
 
     PC_SendData,
+    PC_SendString,
   }PC_Commands;
 
   typedef enum
@@ -50,7 +55,7 @@ class PC_Class
   void sendAns(PC_AnsType ans, PC_Commands cmd);
   void sendTracerData(void);
   void sendSettigs(void);
-  void sendString(char* str, PC_Commands cmd);
+  void sendString(char* str, PC_Commands cm);
   void sendTracerRatedData(void);
   void sendTracerRealTimeData(void);
 };

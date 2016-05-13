@@ -6,12 +6,17 @@
 
 //#define TRACER_DEBUG // pring debug info
 
-#define MB_SLAVE_ADDR   0x01  // Modbus address of tracer
 #define TRACER_TIMES    100.f
 
 class Tracer_Class
 {
 public:
+  typedef enum
+  {
+    MB_SLAVE_TRACER = 0x01,
+    MB_SLAVE_INVERTER = 0x02
+  }TRACER_MODBUS_ADDRESES;
+
    typedef enum
    {
 
@@ -97,17 +102,19 @@ private:
   void init(void);
   void startListening(void);
   // Get single register
-  bool getValueDoubleReg(float* val, REGISTERS_ADDRESSES regnL);
-  bool getValueSingleReg(float* val, REGISTERS_ADDRESSES regN);
-  bool getReadOnlyRegister(uint16_t* reg, REGISTERS_ADDRESSES regN);
-  bool getRwRegister(uint16_t* reg, REGISTERS_ADDRESSES regN);
+  bool getValueDoubleReg(float* val, REGISTERS_ADDRESSES regnL, TRACER_MODBUS_ADDRESES slv);
+  bool getValueSingleReg(float* val, REGISTERS_ADDRESSES regN, TRACER_MODBUS_ADDRESES slv);
+  // Get registers function
+  bool getReadOnlyRegister(uint16_t* reg, REGISTERS_ADDRESSES regN, TRACER_MODBUS_ADDRESES slv);
+  bool getRwRegister(uint16_t* reg, REGISTERS_ADDRESSES regN, TRACER_MODBUS_ADDRESES slv);
+  bool getFlagReg(uint16_t*reg, REGISTERS_ADDRESSES regN, TRACER_MODBUS_ADDRESES slv);
+  bool getDigitalInput(uint16_t*reg, REGISTERS_ADDRESSES regN, TRACER_MODBUS_ADDRESES slv);
   // Refresh all data in groups
-  bool refreshRatedData(void);
-  bool refreshReadOnlyData(void);
+  bool refreshData(void);
   private:
   void send(void);
-  bool receive(void);
-  void formAskFrame(REGISTERS_ADDRESSES val, MODBUS_CMDS cmd, uint16_t num);
+  bool receive(TRACER_MODBUS_ADDRESES slv);
+  void formAskFrame(REGISTERS_ADDRESSES val, MODBUS_CMDS cmd, TRACER_MODBUS_ADDRESES slv, uint16_t num);
 
   // data
   uint8_t lastCmd;

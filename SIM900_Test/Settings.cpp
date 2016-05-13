@@ -8,43 +8,41 @@
   
   void Settings_Class::init(void)
   {
-    address = 02;
-    period = 5; // minutes
-    sprintf(phoneNum, "978784993");
-    sprintf(email, "taraschrt06@gmail.com");
-    sprintf(usrName, "arduino");
-    sprintf(usrPwd, "arduino");
-    sprintf(serverPath, "http://solar-test.comlu.com/storeData.php");
-
-    sprintf(ap, "\"internet\"");
-    sprintf(apUsr, "\"\"");
-    sprintf(apPwd, "\"\"");
-
-    restore((uint8_t*)phoneNum, SETT_PH_NUM_LEN, SETT_PH_NUM_ADDR);
-    restore((uint8_t*)phoneNum, SETT_PH_NUM_LEN, SETT_PH_NUM_ADDR);
+    address = 0x02;
+    restoreAll();
   }
   
   void Settings_Class::restoreAll(void)
   {
-    int addr = SETT_PH_NUM_ADDR;
-    int8_t cnt = 0;
-    while(cnt < SETT_PH_NUM_LEN)
-    {
-      phoneNum[cnt] = EEPROM.read(addr++);
-      cnt++;
-    }
+    uint16_t per[2];
+    restore((uint8_t*)per, SETT_PERIOD_LEN, SETT_PERIOD_ADDRESS);
+    memcpy(&timeout, per, 2);
+
+    restore((uint8_t*)phoneNum, SETT_PH_NUM_LEN, SETT_PH_NUM_ADDR);
+    restore((uint8_t*)email, SETT_EMAIL_LEN, SETT_EMAIL_ADDR);
+    restore((uint8_t*)usrName, SETT_USR_NAME_LEN, SETT_USR_NAME_ADDR);
+    restore((uint8_t*)usrPwd, SETT_USR_PWD_LEN, SETT_USR_PWD_ADDR);
+    restore((uint8_t*)ap, SETT_AP_NAME_LEN, SETT_AP_NAME_ADDR);
+    restore((uint8_t*)apUsr, SETT_AP_USR_LEN, SETT_AP_USR_ADDR);
+    restore((uint8_t*)apPwd, SETT_AP_PWD_LEN, SETT_AP_PWD_ADDR);
+    restore((uint8_t*)serverPath, SETT_SERVER_PATH_LEN, SETT_SERVER_PATH_ADDR);
   }
   void Settings_Class::saveAll(void)
   {
-    int addr = SETT_PH_NUM_ADDR;
-    int8_t cnt = 0;
-    while(cnt < SETT_PH_NUM_LEN)
-    {
-      EEPROM.write(addr++, phoneNum[cnt++]);
-    }
+    save((uint8_t*)timeout, SETT_PERIOD_LEN, SETT_PERIOD_ADDRESS);
+    save((uint8_t*)phoneNum, SETT_PH_NUM_LEN, SETT_PH_NUM_ADDR);
+    save((uint8_t*)email, SETT_EMAIL_LEN, SETT_EMAIL_ADDR);
+    save((uint8_t*)usrName, SETT_USR_NAME_LEN, SETT_USR_NAME_ADDR);
+    save((uint8_t*)usrPwd, SETT_USR_PWD_LEN, SETT_USR_PWD_ADDR);
+    save((uint8_t*)ap, SETT_AP_NAME_LEN, SETT_AP_NAME_ADDR);
+    save((uint8_t*)apUsr, SETT_AP_USR_LEN, SETT_AP_USR_ADDR);
+    save((uint8_t*)apPwd, SETT_AP_PWD_LEN, SETT_AP_PWD_ADDR);
+    save((uint8_t*)serverPath, SETT_SERVER_PATH_LEN, SETT_SERVER_PATH_ADDR);
+
+    //http://solar-test.comlu.com/storeData.php
   }
 
-  void Settings_Class::restore(uint8_t* data, uint8_t len, int addr)
+  bool Settings_Class::restore(uint8_t* data, uint8_t len, int addr)
   {
     uint16_t crc;
     while(len--)
@@ -58,8 +56,10 @@
 
     if(CRC_Ok != CRC_ModRtuCrcCheck(crc, data, len))
     {
-      
+      return false;
     }
+
+    return true;
   }
   void Settings_Class::save(uint8_t* data, uint8_t len, int addr)
   {

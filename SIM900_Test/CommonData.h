@@ -93,6 +93,7 @@ typedef struct
 {
   CD_ProgramStates State;
   bool SendData;
+  bool RefreshTracer;
 }CD_CrType;
 extern CD_CrType CD_Cr;
 
